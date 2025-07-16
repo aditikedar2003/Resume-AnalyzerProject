@@ -1,71 +1,129 @@
 import streamlit as st
 from PIL import Image
+import psycopg2
+import base64
+import os
 
-# --- PAGE CONFIG ---
-st.set_page_config(
-    page_title="Resume Analyzer",
-    layout="wide",
-    page_icon="📄"
-)
+# --- CONFIG ---
+st.set_page_config(page_title="Resume Analyzer", layout="wide")
 
-# --- LOAD LOGO ---
-logo = Image.open("assets/logo.png")  # Make sure to upload this to your GitHub repo
-
-# --- HEADER ---
+# --- LOGO HEADER ---
 col1, col2 = st.columns([1, 6])
 with col1:
+    logo = Image.open("assets/logo.png")  # Make sure this exists
     st.image(logo, width=100)
 with col2:
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; flex-wrap: wrap;">
             <div style="font-size: 26px; font-weight: bold; color: #003366;">Resume Analyzer</div>
-            <div>
-                <a href="#" style="margin-right: 25px; color: #003366; text-decoration: none; font-weight: 500;">Dashboard</a>
-                <a href="#" style="margin-right: 25px; color: #003366; text-decoration: none; font-weight: 500;">Resume Scanner</a>
-                <a href="#" style="margin-right: 25px; color: #003366; text-decoration: none; font-weight: 500;">Cover Letter</a>
-                <a href="#" style="margin-right: 25px; color: #003366; text-decoration: none; font-weight: 500;">LinkedIn Optimizer</a>
-                <a href="#" style="margin-right: 25px; color: #003366; text-decoration: none; font-weight: 500;">Pricing</a>
-                <a href="#" style="margin-right: 15px; color: #003366; text-decoration: none;">Login</a>
-                <a href="#" style="background-color: #003366; color: white; padding: 6px 16px; border-radius: 5px; text-decoration: none;">Sign Up</a>
+            <div style="margin-top: 10px;">
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">Dashboard</a>
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">Resume Scanner</a>
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">Cover Letter</a>
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">LinkedIn Optimizer</a>
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">Pricing</a>
+                <a href="#" style="margin-right: 20px; color: #003366; text-decoration: none;">Login</a>
+                <a href="#" style="background-color: #003366; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none;">Sign Up</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# --- HERO SECTION ---
-st.markdown("""
-    <div style="text-align: center; padding: 40px 0 20px 0;">
-        <h1 style="color: #003366; font-size: 48px;">Optimize Your Resume. Get More Interviews.</h1>
-        <p style="font-size: 20px; color: #555;">Resume Analyzer helps you tailor your resume, cover letter, and LinkedIn to the job you're applying for.</p>
-        <a href="#" style="margin-top: 20px; display: inline-block; background-color: #007BFF; color: white; padding: 14px 28px; border-radius: 5px; font-size: 18px; text-decoration: none;">Try it Now</a>
-    </div>
-""", unsafe_allow_html=True)
+# --- Sidebar Navigation ---
+menu = ["Dashboard", "Resume Scanner", "Cover Letter", "LinkedIn Optimizer", "Pricing", "Login", "Sign Up"]
+choice = st.sidebar.radio("Navigate", menu)
 
-# --- FEATURE SECTION ---
-features = [
-    ("📝 Resume Scanner", "Analyze and improve your resume for ATS and recruiters."),
-    ("📄 Cover Letter Builder", "Generate personalized cover letters that align with job descriptions."),
-    ("🔗 LinkedIn Optimizer", "Optimize your LinkedIn profile for better visibility and matching."),
-    ("📚 Resume Builder", "Use professional templates to build your resume from scratch.")
-]
+# --- PostgreSQL Connection ---
+def connect_db():
+    return psycopg2.connect(
+        host="localhost",
+        database="resume_analyzer",
+        user="postgres",
+        password="yourpassword"  # replace with your actual DB password
+    )
 
-st.markdown("<div style='padding: 20px 0;'>", unsafe_allow_html=True)
-cols = st.columns(4)
-for col, (title, desc) in zip(cols, features):
-    with col:
-        st.markdown(f"""
-            <div style="background-color: #F9F9F9; border: 1px solid #DDD; border-radius: 10px; padding: 20px; height: 200px;">
-                <h3 style="color: #003366;">{title}</h3>
-                <p style="color: #555;">{desc}</p>
-            </div>
-        """, unsafe_allow_html=True)
+# --- Pages ---
+if choice == "Dashboard":
+    st.title("🎯 Welcome to Resume Analyzer")
+    st.write("Tailor your resume, cover letter, and LinkedIn to stand out and land more interviews!")
+    st.image("https://cdn-icons-png.flaticon.com/512/3063/3063829.png", width=150)
 
-st.markdown("</div>", unsafe_allow_html=True)
+elif choice == "Resume Scanner":
+    st.header("📄 Upload Your Resume & Job Description")
+    uploaded_resume = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
+    job_desc = st.text_area("Paste Job Description Here")
 
-# --- FOOTER ---
-st.markdown("""
-    <hr style="margin-top: 40px;">
-    <p style="text-align: center; color: #AAA; font-size: 14px;">© 2025 Resume Analyzer. All rights reserved.</p>
-""", unsafe_allow_html=True)
+    if uploaded_resume and job_desc:
+        st.success("Uploaded Successfully!")
+        try:
+            conn = connect_db()
+            cur = conn.cursor()
+            file_data = uploaded_resume.read()
 
+            # Save resume
+            cur.execute("INSERT INTO resumes (file_name, file_data, user_id) VALUES (%s, %s, %s)",
+                        (uploaded_resume.name, psycopg2.Binary(file_data), 1))
+
+            # Save JD
+            cur.execute("INSERT INTO job_descriptions (title, content, user_id) VALUES (%s, %s, %s)",
+                        ("JD for " + uploaded_resume.name, job_desc, 1))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            st.success("✅ Resume & JD saved to database!")
+
+            # Mock analysis
+            score = 88
+            keywords = ["Python", "Django", "SQL", "REST API"]
+            missing = [k for k in keywords if k.lower() not in job_desc.lower()]
+            st.metric("Match Score", f"{score}%")
+            st.write("**Missing Keywords:**", ", ".join(missing))
+
+        except Exception as e:
+            st.error(f"❌ Database error: {e}")
+    else:
+        st.info("Please upload both resume and JD.")
+
+elif choice == "Cover Letter":
+    st.header("📝 Cover Letter Scanner")
+    st.write("Coming soon...")
+
+elif choice == "LinkedIn Optimizer":
+    st.header("🔗 LinkedIn Optimizer")
+    st.write("Coming soon...")
+
+elif choice == "Pricing":
+    st.header("💰 Pricing Plans")
+    st.write("""
+    - **Free Tier**: 3 scans/month
+    - **Premium**: ₹199/month for unlimited scans
+    - **Enterprise**: Custom pricing
+    """)
+
+elif choice == "Login":
+    st.subheader("🔐 Login to Your Account")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        st.success("✅ Login feature will be added soon.")
+
+elif choice == "Sign Up":
+    st.subheader("🆕 Create a New Account")
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Sign Up"):
+        try:
+            conn = connect_db()
+            cur = conn.cursor()
+            cur.execute("INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, %s)",
+                        (name, email, password, "user"))
+            conn.commit()
+            cur.close()
+            conn.close()
+            st.success("✅ Account created successfully!")
+        except Exception as e:
+            st.error(f"❌ Database error: {e}")
