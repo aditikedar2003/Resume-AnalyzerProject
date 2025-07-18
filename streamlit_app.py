@@ -15,6 +15,7 @@ st.set_page_config(page_title="Resume Analyzer", layout="wide")
 col1, col2 = st.columns([0.2, 0.8])
 with col1:
     st.image("https://raw.githubusercontent.com/aditikedar2003/Resume-Analyzer-Final/main/logo.png", width=100)
+
 with col2:
     st.markdown("<h1 style='padding-top: 20px;'>Resume Analyzer – JobScan Style SaaS</h1>", unsafe_allow_html=True)
 
