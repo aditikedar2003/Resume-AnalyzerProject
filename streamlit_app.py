@@ -1,52 +1,162 @@
 import streamlit as st
+import requests
+import base64
+import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 st.set_page_config(page_title="Resume Analyzer", layout="wide")
 
-# Navigation Header
-st.markdown("""
+# Database configuration from environment variables
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+
+# Database connection function
+def connect_db():
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        )
+        return conn
+    except Exception as e:
+        st.error("Database connection failed: " + str(e))
+        return None
+
+# --- HEADER NAVIGATION ---
+col1, col2, col3 = st.columns([1, 6, 1])
+with col1:
+    st.image("https://raw.githubusercontent.com/aditikedar2003/Resume-Analyzer-Final/main/logo.png", width=100)
+with col2:
+    st.markdown("""
     <style>
-    .navbar {
+    .header-nav {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #f8f8f8;
-        padding: 10px 40px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        justify-content: center;
+        gap: 40px;
+        font-size: 18px;
     }
-    .nav-links a {
-        margin: 0 15px;
+    .header-nav a {
+        color: black;
         text-decoration: none;
         font-weight: bold;
-        color: #333;
     }
-    .nav-links a:hover {
-        color: #007BFF;
+    .header-nav a:hover {
+        color: #FF4B4B;
     }
     </style>
-    <div class="navbar">
-        <div style="display: flex; align-items: center;">
-            <img src="https://raw.githubusercontent.com/aditikedar2003/resume-analyzer-frontend/main/public/logo.png" width="50" style="margin-right: 10px;" />
-            <h2 style="margin: 0;">Resume Analyzer</h2>
-        </div>
-        <div class="nav-links">
-            <a href="#Home">Home</a>
-            <a href="#Resume-Scanner">Resume Scanner</a>
-            <a href="#Cover-Letter">Cover Letter</a>
-            <a href="#LinkedIn">LinkedIn</a>
-            <a href="#Job-Tracker">Job Tracker</a>
-            <a href="#Login">Login</a>
-            <a href="#Signup">Sign Up</a>
-        </div>
+    <div class='header-nav'>
+        <a href='/?app_mode=Home'>Home</a>
+        <a href='/?app_mode=Resume Scanner'>Resume Scanner</a>
+        <a href='/?app_mode=Cover Letter Scanner'>Cover Letter</a>
+        <a href='/?app_mode=LinkedIn Optimizer'>LinkedIn</a>
+        <a href='/?app_mode=Job Tracker'>Job Tracker</a>
+        <a href='/?app_mode=Login'>Login</a>
+        <a href='/?app_mode=Signup'>Sign Up</a>
     </div>
-""", unsafe_allow_html=True)
+    <br><br>
+    """, unsafe_allow_html=True)
 
-# Center Logo
-st.markdown("""
-    <div style='text-align:center; margin-top: 40px;'>
-        <img src='https://raw.githubusercontent.com/aditikedar2003/resume-analyzer-frontend/main/public/logo.png' width='120'/>
-        <h1>Resume Analyzer</h1>
-    </div>
-""", unsafe_allow_html=True)
+app_mode = st.query_params.get("app_mode", "Home")
 
-# You can continue to build out Resume Scanner, Cover Letter, LinkedIn, Job Tracker here...
+# --- Pages ---
+if app_mode == "Home":
+    st.markdown("""
+        <h1 style='text-align: center;'>Resume Analyzer - JobScan Style SaaS</h1>
+        <center><img src='https://www.jobscan.co/images/resume/illustration-ats@2x.png' width='70%'/></center>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+        ## Features:
+        - ✅ ATS Resume Scanner
+        - ✅ Cover Letter Analyzer
+        - ✅ Resume Builder (Coming Soon)
+        - ✅ LinkedIn Optimizer
+        - ✅ Job Tracker
+        
+        🧠 Upload your resume, match it with job descriptions and optimize everything from one platform!
+    """)
+
+elif app_mode == "Resume Scanner":
+    st.header("📄 Upload Your Resume & Job Description")
+    resume = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
+    jd_text = st.text_area("Paste Job Description")
+
+    if st.button("Analyze Resume"):
+        if resume and jd_text:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO resumes (filename, job_description) VALUES (%s, %s)", (resume.name, jd_text))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Resume and JD saved to database.")
+            st.info("Match Rate: 72% (Sample)")
+        else:
+            st.warning("Please upload resume and enter JD.")
+
+elif app_mode == "Cover Letter Scanner":
+    st.header("✉️ Upload Cover Letter")
+    cover_letter = st.file_uploader("Upload Cover Letter (PDF)", type=["pdf"])
+
+    if st.button("Analyze Cover Letter"):
+        if cover_letter:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO cover_letters (filename) VALUES (%s)", (cover_letter.name,))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Cover Letter saved to database.")
+            st.info("Tips: Add more keywords, tailor opening paragraph.")
+        else:
+            st.warning("Please upload a PDF file.")
+
+elif app_mode == "LinkedIn Optimizer":
+    st.header("🔗 Optimize Your LinkedIn Profile")
+    linkedin_text = st.text_area("Paste your LinkedIn Profile Summary or About section")
+    jd_text = st.text_area("Paste a sample Job Description")
+
+    if st.button("Analyze LinkedIn Profile"):
+        if linkedin_text and jd_text:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO linkedin_profiles (summary, job_description) VALUES (%s, %s)", (linkedin_text, jd_text))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ LinkedIn Profile saved to database.")
+            st.info("Profile Optimization Suggestions:\n- Add more action verbs\n- Include measurable results\n- Tailor to role keywords")
+        else:
+            st.warning("Please enter both LinkedIn content and job description.")
+
+elif app_mode == "Job Tracker":
+    st.header("📌 Job Application Tracker")
+    st.info("Coming Soon: Add jobs, track status, and notes here!")
+
+elif app_mode == "Login":
+    st.header("🔐 Login")
+    st.text_input("Username")
+    st.text_input("Password", type="password")
+    st.button("Login")
+
+elif app_mode == "Signup":
+    st.header("📝 Sign Up")
+    st.text_input("Full Name")
+    st.text_input("Email")
+    st.text_input("Username")
+    st.text_input("Password", type="password")
+    st.button("Register")
+
+st.markdown("---")
+st.markdown("Built with ❤️ by Aditi Kedar · Powered by Streamlit")
