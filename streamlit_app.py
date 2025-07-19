@@ -16,7 +16,6 @@ DB_NAME = os.getenv("DB_NAME", "resume_analyzer")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "Test@123")
 
-# Database connection function
 def connect_db():
     try:
         conn = psycopg2.connect(
@@ -31,24 +30,33 @@ def connect_db():
         st.error("Database connection failed: " + str(e))
         return None
 
-# Sidebar Navigation
-st.sidebar.title("Navigation")
-app_mode = st.sidebar.radio("Go to", ["Home", "Resume Scanner", "Cover Letter Scanner", "LinkedIn Optimizer", "Job Tracker"])
-
-# App Header with logo
+# ---------- HEADER (Logo + Navigation) ----------
 st.markdown("""
-    <div style='display: flex; align-items: center;'>
-        <img src='https://raw.githubusercontent.com/aditikedar2003/Resume-Analyzer-Final/main/logo.png' width='60' style='margin-right: 10px;'>
-        <h1 style='display:inline;'>Resume Analyzer</h1>
+    <div style='display: flex; align-items: center; justify-content: space-between; padding: 10px 30px; background-color: #f5f5f5; border-radius: 8px; margin-bottom: 20px;'>
+        <div style='display: flex; align-items: center;'>
+            <img src='https://raw.githubusercontent.com/aditikedar2003/your-repo-name/main/public/logo.png' width='60' style='margin-right: 15px;' />
+            <h2 style='margin: 0;'>Resume Analyzer</h2>
+        </div>
+        <div>
+            <a href='#Home' style='margin-right: 20px;'>Home</a>
+            <a href='#Resume-Scanner' style='margin-right: 20px;'>Resume Scanner</a>
+            <a href='#Cover-Letter' style='margin-right: 20px;'>Cover Letter</a>
+            <a href='#LinkedIn' style='margin-right: 20px;'>LinkedIn</a>
+            <a href='#Job-Tracker' style='margin-right: 20px;'>Job Tracker</a>
+            <a href='#Login' style='margin-right: 20px;'>Login</a>
+            <a href='#Signup'>Sign Up</a>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-# Home Page
-if app_mode == "Home":
-    st.markdown("""
-        <center><img src='https://www.jobscan.co/images/resume/illustration-ats@2x.png' width='70%'/></center>
-    """, unsafe_allow_html=True)
+# ---------- SIDEBAR NAVIGATION ----------
+st.sidebar.title("Navigation")
+app_mode = st.sidebar.radio("Go to", ["Home", "Resume Scanner", "Cover Letter Scanner", "LinkedIn Optimizer", "Job Tracker"])
 
+# ---------- HOME ----------
+if app_mode == "Home":
+    st.markdown("<h2 style='text-align:center;'>Resume Analyzer</h2>", unsafe_allow_html=True)
+    st.image("https://www.jobscan.co/images/resume/illustration-ats@2x.png", use_column_width=True)
     st.markdown("""
         ## Features:
         - ✅ ATS Resume Scanner
@@ -60,7 +68,7 @@ if app_mode == "Home":
         🧠 Upload your resume, match it with job descriptions and optimize everything from one platform!
     """)
 
-# Resume Scanner
+# ---------- RESUME SCANNER ----------
 elif app_mode == "Resume Scanner":
     st.header("📄 Upload Your Resume & Job Description")
 
@@ -81,7 +89,7 @@ elif app_mode == "Resume Scanner":
         else:
             st.warning("Please upload resume and enter JD.")
 
-# Cover Letter Scanner
+# ---------- COVER LETTER ----------
 elif app_mode == "Cover Letter Scanner":
     st.header("✉️ Upload Cover Letter")
 
@@ -100,7 +108,7 @@ elif app_mode == "Cover Letter Scanner":
         else:
             st.warning("Please upload a PDF file.")
 
-# LinkedIn Optimizer
+# ---------- LINKEDIN OPTIMIZER ----------
 elif app_mode == "LinkedIn Optimizer":
     st.header("🔗 Optimize Your LinkedIn Profile")
 
@@ -121,10 +129,27 @@ elif app_mode == "LinkedIn Optimizer":
         else:
             st.warning("Please enter both LinkedIn content and job description.")
 
-# Job Tracker (UI placeholder)
+# ---------- JOB TRACKER ----------
 elif app_mode == "Job Tracker":
     st.header("📌 Job Application Tracker")
-    st.info("Coming Soon: Add jobs, track status, and notes here!")
+    st.write("Track your job applications here:")
+
+    with st.form("job_tracker_form"):
+        company = st.text_input("Company Name")
+        role = st.text_input("Job Role")
+        status = st.selectbox("Application Status", ["Applied", "Interviewing", "Offer", "Rejected"])
+        notes = st.text_area("Notes")
+
+        submitted = st.form_submit_button("Add to Tracker")
+        if submitted:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO job_tracker (company, role, status, notes) VALUES (%s, %s, %s, %s)", (company, role, status, notes))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Job application saved!")
 
 st.markdown("---")
 st.markdown("Built with ❤️ by Aditi Kedar · Powered by Streamlit")
