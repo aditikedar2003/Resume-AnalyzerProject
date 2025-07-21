@@ -14,3 +14,5 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+settings = Settings()  # ✅ This makes the import work!
