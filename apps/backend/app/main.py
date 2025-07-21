@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.core.logging import setup_logging         # ✅ correct now
+from app.core.logging import setup_logging         # ✅ this must exist in logging.py
 from app.core.database import init_models, async_engine
 from app.models.base import Base
 from app.api import router as api_router
