@@ -1,7 +1,13 @@
-import uvicorn
-from .base import create_app
+from fastapi import FastAPI
+from app.core import setup_logging, init_models, async_engine
+from app.api import router as api_router  # Assuming you have routes inside /api
 
-app = create_app()
+setup_logging()
 
-if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+app = FastAPI(title="Resume Analyzer API")
+
+@app.on_event("startup")
+async def on_startup():
+    await init_models(Base)  # This creates tables if they don't exist
+
+app.include_router(api_router)
