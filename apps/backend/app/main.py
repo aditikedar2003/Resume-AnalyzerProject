@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from app.core import setup_logging, init_models, async_engine
+from core import setup_logging, init_models, async_engine
+
 from app.api import router as api_router  # Assuming you have routes inside /api
 
 setup_logging()
