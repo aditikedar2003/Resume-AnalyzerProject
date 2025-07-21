@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import AsyncGenerator, Generator, Optional
+from typing import AsyncGenerator, Generator
 
 from sqlalchemy import event, create_engine
 from sqlalchemy.engine import Engine
@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from .config import settings
-from ..models.base import Base
+from app.core.config import settings
+from app.models.base import Base
 
 
 class _DatabaseSettings:
@@ -29,16 +29,14 @@ class _DatabaseSettings:
     )
 
 
-settings = _DatabaseSettings()
+db_settings = _DatabaseSettings()
 
 
 def _configure_sqlite(engine: Engine) -> None:
     """
-    For SQLite:
-
+    For SQLite only:
     * Enable WAL mode (better concurrent writes).
     * Enforce foreign-key constraints.
-    * Safe noop for non-SQLite engines.
     """
     if engine.dialect.name != "sqlite":
         return
@@ -53,12 +51,11 @@ def _configure_sqlite(engine: Engine) -> None:
 
 @lru_cache(maxsize=1)
 def _make_sync_engine() -> Engine:
-    """Create (or return) the global synchronous Engine."""
     engine = create_engine(
-        settings.SYNC_DATABASE_URL,
-        echo=settings.DB_ECHO,
+        db_settings.SYNC_DATABASE_URL,
+        echo=db_settings.DB_ECHO,
         pool_pre_ping=True,
-        connect_args=settings.DB_CONNECT_ARGS,
+        connect_args=db_settings.DB_CONNECT_ARGS,
         future=True,
     )
     _configure_sqlite(engine)
@@ -67,21 +64,18 @@ def _make_sync_engine() -> Engine:
 
 @lru_cache(maxsize=1)
 def _make_async_engine() -> AsyncEngine:
-    """Create (or return) the global asynchronous Engine."""
     engine = create_async_engine(
-        settings.ASYNC_DATABASE_URL,
-        echo=settings.DB_ECHO,
+        db_settings.ASYNC_DATABASE_URL,
+        echo=db_settings.DB_ECHO,
         pool_pre_ping=True,
-        connect_args=settings.DB_CONNECT_ARGS,
+        connect_args=db_settings.DB_CONNECT_ARGS,
         future=True,
     )
     _configure_sqlite(engine.sync_engine)
     return engine
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Session factories
-# ──────────────────────────────────────────────────────────────────────────────
+# ─── Global Engines and Session Factories ──────────────────────────────
 
 sync_engine: Engine = _make_sync_engine()
 async_engine: AsyncEngine = _make_async_engine()
@@ -99,13 +93,9 @@ AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
 )
 
 
-def get_sync_db_session() -> Generator[Session, None, None]:
-    """
-    Yield a *transactional* synchronous ``Session``.
+# ─── Dependency for Sync Routes ────────────────────────────────────────
 
-    Commits if no exception was raised, otherwise rolls back. Always closes.
-    Useful for CLI scripts or rare sync paths.
-    """
+def get_sync_db_session() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
@@ -117,6 +107,8 @@ def get_sync_db_session() -> Generator[Session, None, None]:
         db.close()
 
 
+# ─── Dependency for Async Routes ───────────────────────────────────────
+
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
@@ -126,6 +118,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             await session.rollback()
             raise
 
+
+# ─── Run DB Migration / Init Tables ────────────────────────────────────
 
 async def init_models(Base: Base) -> None:
     async with async_engine.begin() as conn:
