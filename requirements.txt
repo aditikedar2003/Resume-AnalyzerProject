@@ -1,4 +1,10 @@
+streamlit
+Pillow
 psycopg2-binary
+python-dotenv
+fastapi
+uvicorn
+sqlalchemy
 asyncpg
-SQLAlchemy>=2.0
+pydantic
 pydantic-settings
