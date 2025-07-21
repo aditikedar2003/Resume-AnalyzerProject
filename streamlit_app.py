@@ -71,8 +71,7 @@ app_mode = st.query_params.get("app_mode", "Home")
 # --- Pages ---
 if app_mode == "Home":
     st.markdown("<h1 style='text-align: center;'>Resume Analyzer</h1>", unsafe_allow_html=True)
-    <center><img src='https://raw.githubusercontent.com/aditikedar2003/Resume-Analyzer-Final/main/yourimage.png' width='70%'/></center>
-
+    
     st.markdown("""
         ## Features:
         - ✅ ATS Resume Scanner
