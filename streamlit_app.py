@@ -70,7 +70,7 @@ app_mode = st.query_params.get("app_mode", "Home")
 # --- Pages ---
 if app_mode == "Home":
     st.markdown("""
-        <h1 style='text-align: center;'>Resume Analyzer - JobScan Style SaaS</h1>
+        <h1 style='text-align: center;'>Resume Analyzer</h1>
         <center><img src='https://www.jobscan.co/images/resume/illustration-ats@2x.png' width='70%'/></center>
     """, unsafe_allow_html=True)
     st.markdown("""
