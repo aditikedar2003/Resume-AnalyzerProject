@@ -1,7 +1,6 @@
 import os
-import sys
 import logging
-from typing import List, Optional, Literal
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,7 +30,7 @@ class Settings(BaseSettings):
     ENV: str = "local"
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
+        env_file=os.path.join(os.path.dirname(__file__), ".env"),
         env_file_encoding="utf-8",
     )
 
