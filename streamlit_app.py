@@ -9,7 +9,7 @@ load_dotenv()
 
 st.set_page_config(page_title="Resume Analyzer", layout="wide")
 
-# Database configuration from environment variables
+# Database configuration
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
@@ -28,7 +28,7 @@ def connect_db():
         )
         return conn
     except Exception as e:
-        st.error("Database connection failed: " + str(e))
+        st.error("❌ Database connection failed: " + str(e))
         return None
 
 # --- HEADER NAVIGATION ---
@@ -65,14 +65,13 @@ with col2:
     <br><br>
     """, unsafe_allow_html=True)
 
+# Get selected page from query params
 app_mode = st.query_params.get("app_mode", "Home")
 
 # --- Pages ---
 if app_mode == "Home":
-    st.markdown("""
-        <h1 style='text-align: center;'>Resume Analyzer</h1>
-        <center><img src='https://www.jobscan.co/images/resume/illustration-ats@2x.png' width='70%'/></center>
-    """, unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Resume Analyzer</h1>", unsafe_allow_html=True)
+    st.markdown("<center><img src='https://www.jobscan.co/images/resume/illustration-ats@2x.png' width='70%'/></center>", unsafe_allow_html=True)
     st.markdown("""
         ## Features:
         - ✅ ATS Resume Scanner
@@ -80,7 +79,7 @@ if app_mode == "Home":
         - ✅ Resume Builder (Coming Soon)
         - ✅ LinkedIn Optimizer
         - ✅ Job Tracker
-        
+
         🧠 Upload your resume, match it with job descriptions and optimize everything from one platform!
     """)
 
@@ -142,7 +141,23 @@ elif app_mode == "LinkedIn Optimizer":
 
 elif app_mode == "Job Tracker":
     st.header("📌 Job Application Tracker")
-    st.info("Coming Soon: Add jobs, track status, and notes here!")
+    company = st.text_input("Company Name")
+    position = st.text_input("Job Title / Position")
+    status = st.selectbox("Application Status", ["Applied", "Interview", "Offer", "Rejected", "Saved"])
+    notes = st.text_area("Notes")
+
+    if st.button("Save Job Entry"):
+        if company and position:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO job_tracker (company, position, status, notes) VALUES (%s, %s, %s, %s)", (company, position, status, notes))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Job Application saved successfully.")
+        else:
+            st.warning("Company and Position are required.")
 
 elif app_mode == "Login":
     st.header("🔐 Login")
