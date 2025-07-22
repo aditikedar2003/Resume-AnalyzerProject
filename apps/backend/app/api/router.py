@@ -1,7 +1,9 @@
 from fastapi import APIRouter
-from app.api import resume, user, job  # 👈 your route files
 
 router = APIRouter()
+
+# ⬇️ Import *after* defining `router` to avoid circular import
+from app.api import resume, user, job
 
 router.include_router(resume.router, prefix="/resume", tags=["Resume"])
 router.include_router(user.router, prefix="/user", tags=["User"])
