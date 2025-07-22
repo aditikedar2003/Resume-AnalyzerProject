@@ -1,5 +1,4 @@
 # app/core/config.py
-
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -13,10 +12,9 @@ class Settings(BaseSettings):
     ASYNC_DATABASE_URL: str
 
     SESSION_SECRET_KEY: str
-    DB_ECHO: bool = False  # 👈 this must be bool, not str
+    DB_ECHO: bool = False  # ensure bool
 
     class Config:
         env_file = ".env"
 
-# 👇 THIS MUST BE AT THE VERY END
 settings = Settings()
