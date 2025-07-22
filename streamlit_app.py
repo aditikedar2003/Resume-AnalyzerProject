@@ -96,6 +96,7 @@ elif app_mode == "Resume Scanner":
                 cur.execute("INSERT INTO resumes (filename, content) VALUES (%s, %s)", (resume.name, jd_text))
 
 
+
                 conn.commit()
                 cur.close()
                 conn.close()
