@@ -6,16 +6,16 @@ import hashlib
 
 load_dotenv()
 
-# Streamlit config
+# Set Streamlit page config
 st.set_page_config(page_title="Resume Analyzer", layout="wide")
 
-# --- Session State ---
+# --- SESSION STATE ---
 if 'page' not in st.session_state:
     st.session_state.page = "Home"
 if 'user_email' not in st.session_state:
     st.session_state.user_email = None
 
-# --- Database Configuration ---
+# --- DB Configuration ---
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
@@ -35,35 +35,53 @@ def connect_db():
         st.error("Database connection failed.")
         return None
 
-# --- Password Hashing ---
+# --- Password Hash ---
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# --- Navigation Header ---
+# --- Header Navigation ---
 def header_nav():
     st.markdown("""
     <style>
-    .nav-links {display:flex; justify-content:center; gap:25px;}
-    .nav-links a {text-decoration:none; font-weight:bold; color:#333;}
-    .nav-links a:hover {color:#FF4B4B;}
+    .nav-bar {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .nav-bar a {
+        text-decoration: none;
+        color: black;
+    }
+    .nav-bar a:hover {
+        color: #FF4B4B;
+    }
     </style>
-    <div class='nav-links'>
-        <a href='#' onclick="window.location.reload();">Home</a>
-        <a href='#' onclick="window.location.reload();">Resume Scanner</a>
-        <a href='#' onclick="window.location.reload();">Cover Letter</a>
-        <a href='#' onclick="window.location.reload();">LinkedIn</a>
-        <a href='#' onclick="window.location.reload();">Job Tracker</a>
-        <a href='#' onclick="window.location.reload();">Login</a>
-        <a href='#' onclick="window.location.reload();">Sign Up</a>
+    <div class="nav-bar">
+        <a href="#" onclick="window.location.reload()">Home</a>
+        <a href="#" onclick="window.location.reload()">Resume Scanner</a>
+        <a href="#" onclick="window.location.reload()">Cover Letter</a>
+        <a href="#" onclick="window.location.reload()">LinkedIn</a>
+        <a href="#" onclick="window.location.reload()">Job Tracker</a>
+        <a href="#" onclick="window.location.reload()">Login</a>
+        <a href="#" onclick="window.location.reload()">Sign Up</a>
     </div><br><br>
     """, unsafe_allow_html=True)
 
-# --- Page: Home ---
+    col1, col2 = st.columns([1, 6])
+    with col1:
+        st.image("https://raw.githubusercontent.com/aditikedar2003/Resume-AnalyzerProject/main/logo.png", width=100)
+
+    menu = ["Home", "Resume Scanner", "Cover Letter", "LinkedIn", "Job Tracker", "Login", "Signup"]
+    selected = st.selectbox("📂 Navigation", menu, index=menu.index(st.session_state.page), label_visibility="collapsed")
+    st.session_state.page = selected
+
+# --- Pages ---
 def page_home():
     st.title("🏠 Resume Analyzer")
-    st.write("Welcome to the smart job prep tool!")
+    st.write("Welcome to your one-stop job preparation platform.")
 
-# --- Page: Signup ---
 def page_signup():
     st.header("📝 Sign Up")
     full_name = st.text_input("Full Name")
@@ -81,14 +99,13 @@ def page_signup():
                     conn.commit()
                     st.success("✅ Registered successfully! Redirecting to login...")
                     st.session_state.page = "Login"
-                except Exception as e:
+                except:
                     st.error("Email already exists.")
                 cur.close()
                 conn.close()
         else:
             st.warning("Please fill all fields.")
 
-# --- Page: Login ---
 def page_login():
     st.header("🔐 Login")
     email = st.text_input("Email")
@@ -111,13 +128,12 @@ def page_login():
                 else:
                     st.error("Invalid email or password.")
         else:
-            st.warning("Please fill in both fields.")
+            st.warning("Please fill all fields.")
 
-# --- Page: Resume Scanner ---
 def page_resume_scanner():
     st.markdown("◀️ [Back to Home](#)", unsafe_allow_html=True)
     st.header("📄 Resume Scanner")
-    resume = st.file_uploader("Upload Resume", type=["pdf"])
+    resume = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
     jd_text = st.text_area("Paste Job Description")
 
     if st.button("Analyze"):
@@ -129,12 +145,73 @@ def page_resume_scanner():
                 conn.commit()
                 cur.close()
                 conn.close()
-                st.success("✅ Resume and JD saved to database.")
-                st.info("Match Rate: 78% (Simulated)")
+                st.success("✅ Resume and JD saved.")
+                st.info("Match Rate: 75% (Sample)")
         else:
-            st.warning("Upload resume and enter job description.")
+            st.warning("Please upload a resume and job description.")
 
-# --- Routing ---
+def page_cover_letter():
+    st.markdown("◀️ [Back to Home](#)", unsafe_allow_html=True)
+    st.header("✉️ Cover Letter Scanner")
+    cover_letter = st.file_uploader("Upload Cover Letter (PDF)", type=["pdf"])
+
+    if st.button("Analyze"):
+        if cover_letter:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO cover_letters (filename) VALUES (%s)", (cover_letter.name,))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Cover Letter saved.")
+                st.info("Tip: Add more achievements and keywords.")
+        else:
+            st.warning("Please upload a PDF file.")
+
+def page_linkedin():
+    st.markdown("◀️ [Back to Home](#)", unsafe_allow_html=True)
+    st.header("🔗 LinkedIn Optimizer")
+    summary = st.text_area("Paste your LinkedIn Summary")
+    jd = st.text_area("Paste Job Description")
+
+    if st.button("Analyze"):
+        if summary and jd:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO linkedin_profiles (summary, job_description) VALUES (%s, %s)", (summary, jd))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ LinkedIn data saved.")
+                st.info("Add metrics, results, and strong verbs.")
+        else:
+            st.warning("Please fill both fields.")
+
+def page_job_tracker():
+    st.markdown("◀️ [Back to Home](#)", unsafe_allow_html=True)
+    st.header("📌 Job Tracker")
+    company = st.text_input("Company Name")
+    position = st.text_input("Position")
+    status = st.selectbox("Status", ["Applied", "Interview", "Offer", "Rejected", "Saved"])
+    notes = st.text_area("Notes")
+
+    if st.button("Save Job"):
+        if company and position:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO job_tracker (company, position, status, notes) VALUES (%s, %s, %s, %s)",
+                            (company, position, status, notes))
+                conn.commit()
+                cur.close()
+                conn.close()
+                st.success("✅ Job entry saved.")
+        else:
+            st.warning("Company and Position are required.")
+
+# --- Render Header & Pages ---
 header_nav()
 
 if st.session_state.page == "Home":
@@ -147,21 +224,11 @@ elif st.session_state.page == "Resume Scanner":
     if st.session_state.user_email:
         page_resume_scanner()
     else:
-        st.warning("Please log in to access Resume Scanner.")
+        st.warning("Please log in first.")
         page_login()
-
-# --- Navigation Control ---
-with st.sidebar:
-    st.write("📂 Navigation")
-    if st.button("🏠 Home"):
-        st.session_state.page = "Home"
-    if st.button("📝 Sign Up"):
-        st.session_state.page = "Signup"
-    if st.button("🔐 Login"):
-        st.session_state.page = "Login"
-    if st.session_state.user_email:
-        if st.button("📄 Resume Scanner"):
-            st.session_state.page = "Resume Scanner"
-        if st.button("🚪 Logout"):
-            st.session_state.user_email = None
-            st.session_state.page = "Home"
+elif st.session_state.page == "Cover Letter":
+    page_cover_letter()
+elif st.session_state.page == "LinkedIn":
+    page_linkedin()
+elif st.session_state.page == "Job Tracker":
+    page_job_tracker()
