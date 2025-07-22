@@ -93,7 +93,8 @@ elif app_mode == "Resume Scanner":
             conn = connect_db()
             if conn:
                 cur = conn.cursor()
-                cur.execute("INSERT INTO resumes (file_name, job_description) VALUES (%s, %s)", (resume.name, jd_text))
+                cur.execute("INSERT INTO resumes (user_id, filename, content) VALUES (%s, %s, %s)", (user_id, resume.name, jd_text))
+
 
                 conn.commit()
                 cur.close()
