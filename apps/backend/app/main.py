@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from app.core import setup_logging, init_models
 from app.models.base import Base
-from app.api import router as api_router
+from app.api.router import router as api_router
+
 
 # Setup logging
 setup_logging()
