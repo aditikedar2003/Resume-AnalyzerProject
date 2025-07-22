@@ -1,7 +1,7 @@
 import logging
+import coloredlogs
 
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+def setup_logging() -> None:
+    fmt = "%(asctime)s %(levelname)s %(message)s"
+    coloredlogs.install(fmt=fmt)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
