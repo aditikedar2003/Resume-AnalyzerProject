@@ -175,3 +175,4 @@ elif app_mode == "Signup":
 
 st.markdown("---")
 st.markdown("Built with ❤️ by Aditi Kedar · Powered by Streamlit")
+
