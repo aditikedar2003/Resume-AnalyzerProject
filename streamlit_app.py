@@ -4,6 +4,8 @@ import base64
 import psycopg2
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+import hashlib
 
 load_dotenv()
 
@@ -15,6 +17,10 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
+
+# Global session
+if "user" not in st.session_state:
+    st.session_state.user = None
 
 # Database connection function
 def connect_db():
@@ -30,6 +36,10 @@ def connect_db():
     except Exception as e:
         st.error("❌ Database connection failed: " + str(e))
         return None
+
+# Password hashing
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 # --- HEADER NAVIGATION ---
 col1, col2, col3 = st.columns([1, 6, 1])
@@ -71,7 +81,6 @@ app_mode = st.query_params.get("app_mode", "Home")
 # --- Pages ---
 if app_mode == "Home":
     st.markdown("<h1 style='text-align: center;'>Resume Analyzer</h1>", unsafe_allow_html=True)
-    
     st.markdown("""
         ## Features:
         - ✅ ATS Resume Scanner
@@ -84,98 +93,182 @@ if app_mode == "Home":
     """)
 
 elif app_mode == "Resume Scanner":
-    st.header("📄 Upload Your Resume & Job Description")
-    resume = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
-    jd_text = st.text_area("Paste Job Description")
+    if st.session_state.user:
+        st.header("📄 Upload Your Resume & Job Description")
+        resume = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
+        jd_text = st.text_area("Paste Job Description")
 
-    if st.button("Analyze Resume"):
-        if resume and jd_text:
-            conn = connect_db()
-            if conn:
-                cur = conn.cursor()
-                cur.execute("INSERT INTO resumes (filename, content) VALUES (%s, %s)", (resume.name, jd_text))
-
-
-
-                conn.commit()
-                cur.close()
-                conn.close()
-                st.success("✅ Resume and JD saved to database.")
-            st.info("Match Rate: 72% (Sample)")
-        else:
-            st.warning("Please upload resume and enter JD.")
+        if st.button("Analyze Resume"):
+            if resume and jd_text:
+                conn = connect_db()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS resumes (
+                            id SERIAL PRIMARY KEY,
+                            user_email VARCHAR(100),
+                            filename VARCHAR(255),
+                            job_description TEXT,
+                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cur.execute("INSERT INTO resumes (user_email, filename, job_description) VALUES (%s, %s, %s)",
+                                (st.session_state.user, resume.name, jd_text))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    st.success("✅ Resume and JD saved to database for user: " + st.session_state.user)
+            else:
+                st.warning("Please upload resume and enter JD.")
+    else:
+        st.warning("🔒 Please login to access the Resume Scanner.")
 
 elif app_mode == "Cover Letter Scanner":
-    st.header("✉️ Upload Cover Letter")
-    cover_letter = st.file_uploader("Upload Cover Letter (PDF)", type=["pdf"])
+    if st.session_state.user:
+        st.header("✉️ Upload Cover Letter")
+        cover_letter = st.file_uploader("Upload Cover Letter (PDF)", type=["pdf"])
 
-    if st.button("Analyze Cover Letter"):
-        if cover_letter:
-            conn = connect_db()
-            if conn:
-                cur = conn.cursor()
-                cur.execute("INSERT INTO cover_letters (filename) VALUES (%s)", (cover_letter.name,))
-                conn.commit()
-                cur.close()
-                conn.close()
-                st.success("✅ Cover Letter saved to database.")
-            st.info("Tips: Add more keywords, tailor opening paragraph.")
-        else:
-            st.warning("Please upload a PDF file.")
+        if st.button("Analyze Cover Letter"):
+            if cover_letter:
+                conn = connect_db()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS cover_letters (
+                            id SERIAL PRIMARY KEY,
+                            user_email VARCHAR(100),
+                            filename VARCHAR(255),
+                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cur.execute("INSERT INTO cover_letters (user_email, filename) VALUES (%s, %s)",
+                                (st.session_state.user, cover_letter.name))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    st.success("✅ Cover Letter saved to database for user: " + st.session_state.user)
+            else:
+                st.warning("Please upload a PDF file.")
+    else:
+        st.warning("🔒 Please login to use this feature.")
 
 elif app_mode == "LinkedIn Optimizer":
-    st.header("🔗 Optimize Your LinkedIn Profile")
-    linkedin_text = st.text_area("Paste your LinkedIn Profile Summary or About section")
-    jd_text = st.text_area("Paste a sample Job Description")
+    if st.session_state.user:
+        st.header("🔗 Optimize Your LinkedIn Profile")
+        linkedin_text = st.text_area("Paste your LinkedIn Profile Summary or About section")
+        jd_text = st.text_area("Paste a sample Job Description")
 
-    if st.button("Analyze LinkedIn Profile"):
-        if linkedin_text and jd_text:
-            conn = connect_db()
-            if conn:
-                cur = conn.cursor()
-                cur.execute("INSERT INTO linkedin_profiles (summary, job_description) VALUES (%s, %s)", (linkedin_text, jd_text))
-                conn.commit()
-                cur.close()
-                conn.close()
-                st.success("✅ LinkedIn Profile saved to database.")
-            st.info("Profile Optimization Suggestions:\n- Add more action verbs\n- Include measurable results\n- Tailor to role keywords")
-        else:
-            st.warning("Please enter both LinkedIn content and job description.")
+        if st.button("Analyze LinkedIn Profile"):
+            if linkedin_text and jd_text:
+                conn = connect_db()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS linkedin_profiles (
+                            id SERIAL PRIMARY KEY,
+                            user_email VARCHAR(100),
+                            summary TEXT,
+                            job_description TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cur.execute("INSERT INTO linkedin_profiles (user_email, summary, job_description) VALUES (%s, %s, %s)",
+                                (st.session_state.user, linkedin_text, jd_text))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    st.success("✅ LinkedIn data saved for: " + st.session_state.user)
+            else:
+                st.warning("Please fill both fields.")
+    else:
+        st.warning("🔒 Please login to use this feature.")
 
 elif app_mode == "Job Tracker":
-    st.header("📌 Job Application Tracker")
-    company = st.text_input("Company Name")
-    position = st.text_input("Job Title / Position")
-    status = st.selectbox("Application Status", ["Applied", "Interview", "Offer", "Rejected", "Saved"])
-    notes = st.text_area("Notes")
+    if st.session_state.user:
+        st.header("📌 Job Application Tracker")
+        company = st.text_input("Company Name")
+        position = st.text_input("Job Title / Position")
+        status = st.selectbox("Application Status", ["Applied", "Interview", "Offer", "Rejected", "Saved"])
+        notes = st.text_area("Notes")
 
-    if st.button("Save Job Entry"):
-        if company and position:
-            conn = connect_db()
-            if conn:
-                cur = conn.cursor()
-                cur.execute("INSERT INTO job_tracker (company, position, status, notes) VALUES (%s, %s, %s, %s)", (company, position, status, notes))
-                conn.commit()
-                cur.close()
-                conn.close()
-                st.success("✅ Job Application saved successfully.")
-        else:
-            st.warning("Company and Position are required.")
+        if st.button("Save Job Entry"):
+            if company and position:
+                conn = connect_db()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS job_tracker (
+                            id SERIAL PRIMARY KEY,
+                            user_email VARCHAR(100),
+                            company VARCHAR(255),
+                            position VARCHAR(255),
+                            status VARCHAR(50),
+                            notes TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cur.execute("INSERT INTO job_tracker (user_email, company, position, status, notes) VALUES (%s, %s, %s, %s, %s)",
+                                (st.session_state.user, company, position, status, notes))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    st.success("✅ Job Entry saved.")
+            else:
+                st.warning("Company and Position are required.")
+    else:
+        st.warning("🔒 Please login to use the job tracker.")
 
 elif app_mode == "Login":
     st.header("🔐 Login")
-    st.text_input("Username")
-    st.text_input("Password", type="password")
-    st.button("Login")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        conn = connect_db()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("SELECT email, password FROM users WHERE email = %s", (email,))
+            user = cur.fetchone()
+            if user and hash_password(password) == user[1]:
+                st.success("✅ Logged in successfully!")
+                st.session_state.user = user[0]
+            else:
+                st.error("❌ Invalid email or password.")
+            cur.close()
+            conn.close()
 
 elif app_mode == "Signup":
     st.header("📝 Sign Up")
-    st.text_input("Full Name")
-    st.text_input("Email")
-    st.text_input("Username")
-    st.text_input("Password", type="password")
-    st.button("Register")
+    full_name = st.text_input("Full Name")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Register"):
+        if full_name and email and password:
+            conn = connect_db()
+            if conn:
+                try:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS users (
+                            id SERIAL PRIMARY KEY,
+                            full_name VARCHAR(100),
+                            email VARCHAR(100) UNIQUE NOT NULL,
+                            password TEXT NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cur.execute("INSERT INTO users (full_name, email, password) VALUES (%s, %s, %s)",
+                                (full_name, email, hash_password(password)))
+                    conn.commit()
+                    st.success("✅ Registration successful. Please login.")
+                except psycopg2.errors.UniqueViolation:
+                    st.error("❌ Email already registered.")
+                except Exception as e:
+                    st.error("❌ Registration failed: " + str(e))
+                finally:
+                    cur.close()
+                    conn.close()
+        else:
+            st.warning("All fields are required.")
 
 st.markdown("---")
 st.markdown("Built with ❤️ by Aditi Kedar · Powered by Streamlit")
-
