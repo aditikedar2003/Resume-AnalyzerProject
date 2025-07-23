@@ -8,3 +8,5 @@ sqlalchemy
 asyncpg
 pydantic
 pydantic-settings
+scikit-learn
+
