@@ -9,4 +9,5 @@ asyncpg
 pydantic
 pydantic-settings
 scikit-learn
+PyPDF2
 
