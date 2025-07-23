@@ -1,13 +1,24 @@
+# Core Web Framework and UI
 streamlit
-Pillow
-psycopg2-binary
-python-dotenv
 fastapi
 uvicorn
-sqlalchemy
-asyncpg
-pydantic
-pydantic-settings
-scikit-learn
+
+# File handling
+Pillow
+docx2txt
 PyPDF2
 
+# Database
+psycopg2-binary
+asyncpg
+sqlalchemy
+python-dotenv
+
+# Data Models and Validation
+pydantic
+pydantic-settings
+
+# Machine Learning and NLP
+scikit-learn
+nltk
+pandas
