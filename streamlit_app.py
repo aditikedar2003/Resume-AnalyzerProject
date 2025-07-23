@@ -1,135 +1,66 @@
 import streamlit as st
 import psycopg2
-import os
-from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import PyPDF2
+import io
 
-load_dotenv()
+# -- Database connection
+conn = psycopg2.connect(
+    host=st.secrets["DB_HOST"],
+    database=st.secrets["DB_NAME"],
+    user=st.secrets["DB_USER"],
+    password=st.secrets["DB_PASS"],
+    port=st.secrets["DB_PORT"]
+)
+cur = conn.cursor()
 
-st.set_page_config(page_title="Resume Analyzer", layout="wide")
-
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-
-# Database connection
-
-def connect_db():
-    try:
-        return psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS
-        )
-    except Exception as e:
-        st.error("❌ DB Connection Error: " + str(e))
-        return None
-
-# Extract text from PDF
-
-def extract_text_from_pdf(pdf_file):
-    reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
+# -- Function to extract text from PDF
+def extract_text_from_pdf(uploaded_file):
+    reader = PyPDF2.PdfReader(uploaded_file)
+    text = ''
     for page in reader.pages:
         text += page.extract_text()
     return text
 
-# Match resume vs JD using TF-IDF + cosine similarity
+# -- Keyword extraction function
+def extract_keywords(text):
+    return set(word.lower() for word in text.split() if word.isalpha())
 
-def analyze_match(resume_text, jd_text):
-    tfidf = TfidfVectorizer(stop_words='english')
-    tfidf_matrix = tfidf.fit_transform([resume_text, jd_text])
-    match_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    match_percentage = round(match_score * 100, 2)
+# --------------------
+# 📄 RESUME SCANNER UI
+# --------------------
+st.header("📄 Resume Scanner")
 
-    resume_tokens = set(tfidf.inverse_transform(tfidf_matrix[0])[0])
-    jd_tokens = set(tfidf.inverse_transform(tfidf_matrix[1])[0])
-    matched_keywords = list(resume_tokens.intersection(jd_tokens))
-    missing_keywords = list(jd_tokens - resume_tokens)
+resume = st.file_uploader("Upload your Resume (PDF only)", type=['pdf'])
+job_description = st.text_area("Paste Job Description")
 
-    return match_percentage, matched_keywords, missing_keywords
+if resume and job_description:
+    resume_text = extract_text_from_pdf(resume)
+    jd_text = job_description
 
-# Header navigation
-col1, col2, col3 = st.columns([1, 6, 1])
-with col1:
-    st.image("https://raw.githubusercontent.com/aditikedar2003/Resume-AnalyzerProject/main/logo.png", width=100)
-with col2:
-    st.markdown("""
-    <style>
-    .header-nav {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-        font-size: 18px;
-    }
-    .header-nav a {
-        color: black;
-        text-decoration: none;
-        font-weight: bold;
-    }
-    .header-nav a:hover {
-        color: #FF4B4B;
-    }
-    </style>
-    <div class='header-nav'>
-        <a href='/?app_mode=Home'>Home</a>
-        <a href='/?app_mode=Resume Scanner'>Resume Scanner</a>
-        <a href='/?app_mode=Cover Letter Scanner'>Cover Letter</a>
-        <a href='/?app_mode=LinkedIn Optimizer'>LinkedIn</a>
-        <a href='/?app_mode=Job Tracker'>Job Tracker</a>
-        <a href='/?app_mode=Login'>Login</a>
-        <a href='/?app_mode=Signup'>Sign Up</a>
-    </div><br><br>
-    """, unsafe_allow_html=True)
+    # Save to DB
+    cur.execute("INSERT INTO resumes (file_name, job_description) VALUES (%s, %s)", 
+                (resume.name, jd_text))
+    conn.commit()
 
-app_mode = st.query_params.get("app_mode", "Home")
+    # TF-IDF & Cosine Similarity
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([resume_text, jd_text])
+    score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0] * 100
 
-# Pages
-if app_mode == "Home":
-    st.markdown("<h1 style='text-align: center;'>Resume Analyzer</h1>", unsafe_allow_html=True)
-    st.markdown("""
-        ## Features:
-        - ✅ ATS Resume Scanner
-        - ✅ Cover Letter Analyzer
-        - ✅ LinkedIn Optimizer
-        - ✅ Job Tracker
-        
-        Upload your resume, match it with job descriptions and optimize everything from one platform!
-    """)
+    # Matched & Missing Keywords
+    resume_keywords = extract_keywords(resume_text)
+    jd_keywords = extract_keywords(jd_text)
+    matched_keywords = sorted(resume_keywords & jd_keywords)
+    missing_keywords = sorted(jd_keywords - resume_keywords)
 
-elif app_mode == "Resume Scanner":
-    st.header("📄 Upload Your Resume & Job Description")
-    resume_file = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
-    jd_text = st.text_area("Paste Job Description")
+    # ✅ Display results
+    st.success("✅ Resume and JD saved to database.")
+    st.metric("🎯 Match Rate", f"{score:.2f}%")
 
-    if st.button("Analyze Resume"):
-        if resume_file and jd_text:
-            resume_text = extract_text_from_pdf(resume_file)
-            match_rate, matched_keywords, missing_keywords = analyze_match(resume_text, jd_text)
+    st.markdown(f"✅ **Matched Keywords** ({len(matched_keywords)}):")
+    st.write(', '.join(matched_keywords) if matched_keywords else "None")
 
-            conn = connect_db()
-            if conn:
-                cur = conn.cursor()
-                cur.execute("INSERT INTO resumes (filename, content) VALUES (%s, %s)", (resume_file.name, jd_text))
-                conn.commit()
-                cur.close()
-                conn.close()
-                st.success("✅ Resume and JD saved to database.")
-
-            st.subheader(f"🎯 Match Rate: {match_rate}%")
-            st.markdown(f"**✅ Matched Keywords:** {matched_keywords}")
-            st.markdown(f"**❌ Missing Keywords:** {missing_keywords}")
-        else:
-            st.warning("Please upload resume and enter JD.")
-
-# Other pages remain unchanged...
-# (You can copy them over or let me help enhance them next.)
-
-st.markdown("---")
-st.markdown("Built with ❤️ by Aditi Kedar · Powered by Streamlit")
+    st.markdown(f"❌ **Missing Keywords** ({len(missing_keywords)}):")
+    st.write(', '.join(missing_keywords) if missing_keywords else "None")
