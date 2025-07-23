@@ -1,112 +1,118 @@
-# streamlit_app.py
 import streamlit as st
 import psycopg2
+from dotenv import load_dotenv
+import os
 import PyPDF2
 import docx2txt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import os
-from dotenv import load_dotenv
 from datetime import datetime
 
-# Load environment variables
 load_dotenv()
 
-# DB Connection
+st.set_page_config(page_title="JobBoost - Resume Analyzer", layout="centered")
+
+# ======= Styling =======
+st.markdown("""
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+        }
+        .main {
+            padding: 2rem;
+        }
+        .upload-box {
+            border: 2px dashed #007BFF;
+            padding: 1.5rem;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        .section-header {
+            font-size: 28px;
+            color: #007BFF;
+            font-weight: bold;
+            margin-top: 2rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("📄 JobBoost - Resume vs Job Match")
+
+# ======= Database Connection =======
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
     port=os.getenv("DB_PORT"),
-    database=os.getenv("DB_NAME"),
+    dbname=os.getenv("DB_NAME"),
     user=os.getenv("DB_USER"),
     password=os.getenv("DB_PASS")
 )
 cursor = conn.cursor()
 
-# Title Section
-st.markdown("""
-    <h1 style='text-align: center; color: #2C3E50;'>JobBoost - AI-Powered Resume Analyzer</h1>
-    <p style='text-align: center; font-size:18px;'>Optimize your Resume & Cover Letter to land your dream job faster 🚀</p>
-""", unsafe_allow_html=True)
+# ======= Helper Functions =======
 
-st.markdown("---")
+def extract_text_from_pdf(uploaded_file):
+    pdf_reader = PyPDF2.PdfReader(uploaded_file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
 
-# Step 1: Upload Resume
-st.subheader("1. Upload Resume (.pdf or .docx)")
-resume_file = st.file_uploader("Choose your resume file", type=["pdf", "docx"])
+def extract_text_from_docx(uploaded_file):
+    return docx2txt.process(uploaded_file)
 
-# Step 2: Add Job Description
-st.subheader("2. Paste Job Description")
-jd_text = st.text_area("Paste the job description here")
+def calculate_match(resume_text, jd_text):
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([resume_text, jd_text])
+    similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
+    return round(float(similarity[0][0]) * 100, 2)
 
-# Step 3: Upload Cover Letter (Optional)
-st.subheader("3. Upload Cover Letter (.pdf or .docx)")
-cover_letter_file = st.file_uploader("Choose your cover letter file (optional)", type=["pdf", "docx"], key="cover")
+# ======= Main UI Section =======
+st.markdown("### 1. Upload Your Resume")
+uploaded_resume = st.file_uploader("Upload your resume (.pdf or .docx)", type=["pdf", "docx"])
 
-if st.button("Analyze Now"):
-    if resume_file and jd_text:
-        def extract_text(file):
-            if file.name.endswith(".pdf"):
-                reader = PyPDF2.PdfReader(file)
-                return " ".join([page.extract_text() for page in reader.pages if page.extract_text()])
-            elif file.name.endswith(".docx"):
-                return docx2txt.process(file)
-            return ""
+st.markdown("### 2. Paste Job Description")
+job_description = st.text_area("Paste the job description here...", height=200)
 
-        resume_text = extract_text(resume_file)
-        vectorizer = TfidfVectorizer(stop_words='english')
-        vectors = vectorizer.fit_transform([resume_text, jd_text])
-        score = cosine_similarity(vectors[0:1], vectors[1:2])[0][0] * 100
+if st.button("⚡ Analyze Now"):
+    if uploaded_resume and job_description.strip():
+        file_name = uploaded_resume.name
 
-        # Keyword analysis
-        resume_tokens = set(resume_text.lower().split())
-        jd_tokens = set(jd_text.lower().split())
-        matched_keywords = list(resume_tokens & jd_tokens)
-        missing_keywords = list(jd_tokens - resume_tokens)
+        if uploaded_resume.type == "application/pdf":
+            resume_text = extract_text_from_pdf(uploaded_resume)
+        elif uploaded_resume.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+            resume_text = extract_text_from_docx(uploaded_resume)
+        else:
+            st.error("Unsupported file format.")
+            st.stop()
 
-        # Insert into DB
-        cursor.execute("""
-            INSERT INTO resumes (file_name, job_description, match_score, matched_keywords, missing_keywords, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            resume_file.name, jd_text, round(score, 2), ', '.join(matched_keywords), ', '.join(missing_keywords), datetime.now()
-        ))
+        match_score = calculate_match(resume_text, job_description)
+
+        # Save to database
+        cursor.execute(
+            "INSERT INTO resumes (file_name, job_description, match_score, created_at) VALUES (%s, %s, %s, %s)",
+            (file_name, job_description, match_score, datetime.now())
+        )
         conn.commit()
 
-        st.success("✅ Resume and JD saved to database.")
-
-        st.metric("🎯 Match Rate", f"{score:.2f}%")
-
-        st.markdown(f"✅ **Matched Keywords** ({len(matched_keywords)}):")
-        st.write(", ".join(matched_keywords))
-
-        st.markdown(f"❌ **Missing Keywords** ({len(missing_keywords)}):")
-        st.write(", ".join(missing_keywords))
-
-        if cover_letter_file:
-            cl_text = extract_text(cover_letter_file)
-            cl_vecs = vectorizer.fit_transform([cl_text, jd_text])
-            cl_score = cosine_similarity(cl_vecs[0:1], cl_vecs[1:2])[0][0] * 100
-            st.metric("✉️ Cover Letter Match", f"{cl_score:.2f}%")
-
-        st.markdown("---")
-        st.success("✨ Analysis Complete!")
+        st.success(f"✅ Match Score: **{match_score}%**")
+        st.progress(int(match_score))
 
     else:
-        st.error("❗ Please upload a resume and enter job description.")
+        st.warning("Please upload a resume and paste job description to proceed.")
 
-# Resume Match History Section
-st.markdown("""
-    <h3 style='color:#2C3E50;'>📁 Resume Match History</h3>
-""", unsafe_allow_html=True)
+# ======= Match History =======
+st.markdown("### 📊 Match History")
 
-cursor.execute("SELECT file_name, match_score, created_at FROM resumes ORDER BY created_at DESC LIMIT 10")
-data = cursor.fetchall()
-if data:
-    for row in data:
-        st.write(f"📄 **{row[0]}** — 🟢 Score: {row[1]}% — 📅 {row[2].strftime('%Y-%m-%d %H:%M')}")
-else:
-    st.info("No resume history found.")
+try:
+    cursor.execute("SELECT file_name, match_score, created_at FROM resumes ORDER BY created_at DESC LIMIT 10")
+    rows = cursor.fetchall()
 
-# Footer
-st.markdown("---")
-st.markdown("<p style='text-align:center;'>Built with ❤️ by JobBoost | Inspired by Jobscan</p>", unsafe_allow_html=True)
+    if rows:
+        st.table([
+            {"Resume": row[0], "Match %": f"{row[1]}%", "Date": row[2].strftime("%Y-%m-%d %H:%M")}
+            for row in rows
+        ])
+    else:
+        st.info("No history found.")
+except Exception as e:
+    st.error("⚠️ Error fetching history. Please ensure your database is up-to-date.")
