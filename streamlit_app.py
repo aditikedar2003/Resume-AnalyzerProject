@@ -1,6 +1,6 @@
-import streamlit as st
+# streamlit_app.py
 
-# Import views
+import streamlit as st
 from views.auth import show_login_page, show_signup_page
 from views.resume_scanner import show_resume_scanner
 from views.cover_letter import show_cover_letter_analyzer
@@ -10,40 +10,33 @@ from views.resume_builder import show_resume_builder
 from views.dashboard import show_dashboard
 from views.navbar import show_navbar
 
-# Import session utils
-from utils.session import get_user_id
+# ✅ Handle user session
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = None
+if "auth_mode" not in st.session_state:
+    st.session_state["auth_mode"] = "login"
 
-# Set Streamlit page config
-st.set_page_config(page_title="Resume Analyzer", page_icon="📄", layout="wide")
+user_id = st.session_state["user_id"]
 
-# Get user session
-user_id = get_user_id()
-
-# 🔐 Auth Flow
 if not user_id:
-    if "auth_mode" not in st.session_state:
-        st.session_state["auth_mode"] = "login"
-
     if st.session_state["auth_mode"] == "login":
         show_login_page()
     else:
         show_signup_page()
-
 else:
-    # ✅ Authenticated - show navbar and route
+    # ✅ Logged in: show main app
     show_navbar()
+    page = st.session_state.get("page", "dashboard")
 
-    page = st.session_state.get("selected_page", "Dashboard")
-
-    if page == "Dashboard":
+    if page == "dashboard":
         show_dashboard()
-    elif page == "Resume Scanner":
+    elif page == "resume_scanner":
         show_resume_scanner()
-    elif page == "Cover Letter Analyzer":
+    elif page == "cover_letter":
         show_cover_letter_analyzer()
-    elif page == "LinkedIn Optimizer":
+    elif page == "linkedin":
         show_linkedin_optimizer()
-    elif page == "Job Tracker":
+    elif page == "job_tracker":
         show_job_tracker()
-    elif page == "Resume Builder":
+    elif page == "resume_builder":
         show_resume_builder()
