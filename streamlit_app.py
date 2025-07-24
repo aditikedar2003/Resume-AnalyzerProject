@@ -10,14 +10,17 @@ def main():
         st.session_state.page = 'login'
 
     if st.session_state.logged_in:
-        st.title("Welcome to JobBoost 🎯")
-        st.success("You are logged in.")
-        st.write("🔍 Navigate to the Resume Scanner, Cover Letter Analyzer, etc.")
+        show_home()
     else:
         if st.session_state.page == 'login':
             show_login_page()
         elif st.session_state.page == 'signup':
             show_signup_page()
+
+def show_home():
+    st.title(f"Welcome to JobBoost, {st.session_state.get('user_name', 'User')}! 🎯")
+    st.success("You're now logged in.")
+    st.write("🔍 Start using Resume Scanner, Cover Letter Analyzer, LinkedIn Optimizer, etc.")
 
 if __name__ == "__main__":
     main()
