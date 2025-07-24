@@ -1,58 +1,48 @@
+# views/auth.py
+
 import streamlit as st
-from utils.db import get_db_connection
-from utils.session import set_user_id
-
-def show_signup_page():
-    st.title("Create a New Account")
-
-    full_name = st.text_input("Full Name")
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-    confirm = st.text_input("Confirm Password", type="password")
-
-    if st.button("Sign Up"):
-        if password != confirm:
-            st.error("Passwords do not match.")
-            return
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        try:
-            cur.execute("INSERT INTO users (full_name, email, password) VALUES (%s, %s, %s) RETURNING id",
-                        (full_name, email, password))
-            user_id = cur.fetchone()[0]
-            conn.commit()
-            set_user_id(user_id)
-            st.success("Account created! Please log in.")
-            st.session_state["auth_mode"] = "login"
-        except Exception as e:
-            conn.rollback()
-            st.error("Error creating account: Email may already be registered.")
-        finally:
-            cur.close()
-            conn.close()
+from database import get_user_by_email, insert_user  # assuming you have these
 
 def show_login_page():
-    st.title("Welcome Back")
-
+    st.title("Login")
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
-
-    if st.button("Log In"):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE email = %s AND password = %s", (email, password))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if user:
-            set_user_id(user[0])
-            st.success("Logged in successfully!")
-            st.session_state.page = "Resume Scanner"
+    
+    if st.button("Login"):
+        user = get_user_by_email(email)
+        if user and user["password"] == password:
+            st.success("Login successful")
+            st.session_state["user_id"] = user["id"]   # ✅ Add this
+            st.session_state["page"] = "dashboard"      # ✅ redirect
+            st.experimental_rerun()
         else:
             st.error("Invalid credentials")
 
-    if st.button("Don't have an account? Sign Up"):
+    if st.button("Don't have an account? Sign up"):
         st.session_state["auth_mode"] = "signup"
+        st.experimental_rerun()
+
+
+def show_signup_page():
+    st.title("Sign Up")
+    name = st.text_input("Full Name")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    confirm_password = st.text_input("Confirm Password", type="password")
+    
+    if st.button("Sign Up"):
+        if password != confirm_password:
+            st.error("Passwords do not match")
+        else:
+            user_id = insert_user(name, email, password)
+            if user_id:
+                st.success("Signup successful")
+                st.session_state["user_id"] = user_id   # ✅ Add this
+                st.session_state["page"] = "dashboard"
+                st.experimental_rerun()
+            else:
+                st.error("Email already exists")
+
+    if st.button("Already have an account? Login"):
+        st.session_state["auth_mode"] = "login"
+        st.experimental_rerun()
