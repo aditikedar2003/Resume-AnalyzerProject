@@ -8,7 +8,7 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 
-
+# 🔌 Establish a connection to the PostgreSQL database
 def connect():
     return psycopg2.connect(
         host=DB_HOST,
@@ -18,7 +18,14 @@ def connect():
         password=DB_PASS
     )
 
+# ✅ For importing inside other files when you need both conn & cursor
+def get_db_connection():
+    """Return a new database connection and cursor."""
+    conn = connect()
+    cur = conn.cursor()
+    return conn, cur
 
+# 🔐 Check user credentials for login
 def get_user_by_email(email):
     conn = connect()
     cur = conn.cursor()
@@ -28,7 +35,7 @@ def get_user_by_email(email):
     conn.close()
     return user
 
-
+# 📝 Insert a new user into the database during registration
 def insert_user(full_name, email, password):
     conn = connect()
     cur = conn.cursor()
