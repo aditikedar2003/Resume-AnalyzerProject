@@ -1,27 +1,17 @@
 import psycopg2
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-
-def get_db_connection():
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
+def get_connection():
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS")
     )
-    return conn
 
 def get_user_by_email(email):
-    conn = get_db_connection()
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE email = %s", (email,))
     user = cur.fetchone()
@@ -29,16 +19,10 @@ def get_user_by_email(email):
     conn.close()
     return user
 
-def insert_user(full_name, email, password_hash):
-    conn = get_db_connection()
+def insert_user(name, email, hashed_password):
+    conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO users (full_name, email, password)
-        VALUES (%s, %s, %s)
-        RETURNING id
-    """, (full_name, email, password_hash))
-    user_id = cur.fetchone()[0]
+    cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)", (name, email, hashed_password))
     conn.commit()
     cur.close()
     conn.close()
-    return user_id
