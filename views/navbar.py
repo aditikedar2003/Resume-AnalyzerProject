@@ -1,42 +1,44 @@
+# views/navbar.py
+
 import streamlit as st
 
-def show_navbar(selected):
-    st.markdown(
-        """
+def show_navbar():
+    st.markdown("""
         <style>
-        .navbar {
-            display: flex;
-            justify-content: space-around;
-            padding: 0.75rem;
-            background-color: #f0f2f6;
-            border-bottom: 1px solid #ddd;
-        }
-        .navbar a {
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-        .navbar a.active {
-            color: #1a73e8;
-        }
+            .nav-link {
+                padding: 8px 15px;
+                margin-right: 10px;
+                background-color: #6A0DAD;
+                color: white;
+                border-radius: 10px;
+                text-decoration: none;
+                font-weight: bold;
+            }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-    pages = {
-        "Dashboard": "🏠 Dashboard",
-        "Resume Scanner": "📄 Resume Scanner",
-        "Cover Letter": "✉️ Cover Letter",
-        "LinkedIn Optimizer": "🔗 LinkedIn",
-        "Job Tracker": "🗂️ Job Tracker",
-        "Resume Builder": "🛠️ Resume Builder",
-        "Logout": "🚪 Logout"
-    }
-
-    links = ""
-    for page, label in pages.items():
-        active_class = "active" if page == selected else ""
-        links += f'<a href="/?nav={page}" class="{active_class}">{label}</a>'
-
-    st.markdown(f'<div class="navbar">{links}</div>', unsafe_allow_html=True)
+    cols = st.columns([1, 1, 1, 1, 1, 1])
+    with cols[0]:
+        if st.button("Dashboard"):
+            st.session_state["page"] = "dashboard"
+            st.experimental_rerun()
+    with cols[1]:
+        if st.button("Resume"):
+            st.session_state["page"] = "resume_scanner"
+            st.experimental_rerun()
+    with cols[2]:
+        if st.button("Cover Letter"):
+            st.session_state["page"] = "cover_letter"
+            st.experimental_rerun()
+    with cols[3]:
+        if st.button("LinkedIn"):
+            st.session_state["page"] = "linkedin"
+            st.experimental_rerun()
+    with cols[4]:
+        if st.button("Job Tracker"):
+            st.session_state["page"] = "job_tracker"
+            st.experimental_rerun()
+    with cols[5]:
+        if st.button("Resume Builder"):
+            st.session_state["page"] = "resume_builder"
+            st.experimental_rerun()
