@@ -10,9 +10,20 @@ def show_login_page():
 
     if st.button("Login"):
         user = get_user_by_email(email)
-        if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
-            st.session_state.logged_in = True
-            st.success("Login successful!")
+
+        if user:
+            try:
+                hashed_pw = user[3]  # Ensure this index exists
+                if bcrypt.checkpw(password.encode('utf-8'), hashed_pw.encode('utf-8')):
+                    st.session_state.logged_in = True
+                    st.session_state.user_id = user[0]
+                    st.session_state.user_name = user[1]
+                    st.success("Login successful!")
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password.")
+            except IndexError:
+                st.error("User data is corrupted or schema mismatch.")
         else:
             st.error("Invalid email or password.")
 
@@ -38,6 +49,7 @@ def show_signup_page():
             insert_user(full_name, email, hashed_pw)
             st.success("Account created successfully! Please login.")
             st.session_state.page = 'login'
+            st.rerun()
 
     st.markdown("Already have an account? [Login](#)", unsafe_allow_html=True)
     if st.button("Go to Login"):
