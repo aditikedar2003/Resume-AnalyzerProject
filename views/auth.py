@@ -12,12 +12,12 @@ def show_login_page():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        user = get_user_by_email(email)  # Returns (id, email, password)
-        if user and user[2] == hash_password(password):  # Compare hashed passwords
+        user = get_user_by_email(email)  # Returns tuple: (id, email, password)
+        if user and user[2] == hash_password(password):
             st.success("Login successful!")
-            st.session_state["user_id"] = user[0]  # Set session user_id
-            st.session_state["page"] = "dashboard"  # Navigate to dashboard
-            st.rerun()  # 🔁 Required to reload UI to new state
+            st.session_state["user_id"] = user[0]
+            st.session_state["page"] = "dashboard"
+            st.rerun()
         else:
             st.error("Invalid credentials.")
 
@@ -40,7 +40,7 @@ def show_signup_page():
 
         hashed_pw = hash_password(password)
         try:
-            insert_user(full_name, email, hashed_pw)
+            user_id = insert_user(full_name, email, hashed_pw)
             st.success("Registered successfully! Please log in.")
             st.session_state["auth_mode"] = "login"
             st.rerun()
