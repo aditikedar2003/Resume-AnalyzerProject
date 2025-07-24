@@ -1,36 +1,49 @@
 import streamlit as st
 import bcrypt
 from utils.db import get_user_by_email, insert_user
-from utils.session import set_user_id
 
 def show_login_page():
     st.subheader("🔐 Login to Resume Analyzer")
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
+
     if st.button("Login"):
         user = get_user_by_email(email)
         if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
-            st.success("Login successful!")
-            set_user_id(user[0])
-            st.experimental_rerun()
+            st.success("✅ Login successful!")
+            st.session_state.logged_in = True
+            st.session_state.user_id = user[0]
+            st.session_state.full_name = user[1]
         else:
-            st.error("Invalid login details")
+            st.error("❌ Invalid email or password")
+
+    st.markdown("Don't have an account? [Sign up here](#)", unsafe_allow_html=True)
+    if st.button("Go to Sign Up"):
+        st.session_state.page = "signup"
+
 
 def show_signup_page():
-    st.subheader("🧾 Sign Up for Resume Analyzer")
+    st.subheader("🆕 Create Your Resume Analyzer Account")
     full_name = st.text_input("Full Name")
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
+    confirm_password = st.text_input("Confirm Password", type="password")
+
     if st.button("Sign Up"):
-        if not full_name or not email or not password:
-            st.warning("Please fill all fields")
-        elif get_user_by_email(email):
-            st.error("Email already registered.")
-        else:
-            hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            user_id = insert_user(full_name, email, hashed_pw.decode('utf-8'))
-            if user_id:
-                st.success("Registration successful! Please log in.")
-                st.experimental_rerun()
-            else:
-                st.error("Registration failed.")
+        if password != confirm_password:
+            st.error("❌ Passwords do not match")
+            return
+
+        existing_user = get_user_by_email(email)
+        if existing_user:
+            st.error("❌ Email already registered")
+            return
+
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        user_id = insert_user(full_name, email, password_hash)
+        st.success("✅ Account created successfully! Please log in.")
+        st.session_state.page = "login"
+
+    st.markdown("Already have an account? [Login here](#)", unsafe_allow_html=True)
+    if st.button("Go to Login"):
+        st.session_state.page = "login"
