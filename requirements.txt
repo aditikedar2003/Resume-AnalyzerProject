@@ -22,3 +22,5 @@ pydantic-settings
 scikit-learn
 nltk
 pandas
+bcrypt
+
