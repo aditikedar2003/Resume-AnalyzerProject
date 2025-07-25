@@ -1,7 +1,8 @@
 # streamlit_app.py
 
 import streamlit as st
-from auth import login_ui, signup_ui
+from views.auth import show_login_page, show_signup_page
+
 
 # Load custom theme
 with open("styles/theme.css") as f:
