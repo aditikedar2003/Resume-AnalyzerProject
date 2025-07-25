@@ -9,11 +9,12 @@ def get_user_by_email(email):
     conn.close()
     if row:
         return {
-            "id": row[0],
-            "name": row[1],
-            "email": row[2],
-            "password": row[3]
-        }
+    "id": row[0],
+    "full_name": row[1],
+    "email": row[2],
+    "password": row[3]
+}
+
     return None
 
 def create_user(name, email, password):
