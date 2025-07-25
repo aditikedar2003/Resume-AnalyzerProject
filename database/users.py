@@ -3,16 +3,32 @@ from utils.db import get_connection
 def get_user_by_email(email):
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cur.fetchone()
+    cur.execute("SELECT id, name, email, password FROM users WHERE email = %s", (email,))
+    row = cur.fetchone()
     cur.close()
     conn.close()
-    return user
+    if row:
+        return {
+            "id": row[0],
+            "name": row[1],
+            "email": row[2],
+            "password": row[3]
+        }
+    return None
 
-def create_user(email, hashed_password):
+def create_user(name, email, password):
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO users (email, password) VALUES (%s, %s)", (email, hashed_password))
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        cur.execute(
+            "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+            (name, email, password)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print("Error creating user:", e)
+        return False
+    finally:
+        cur.close()
+        conn.close()
