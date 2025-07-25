@@ -11,7 +11,8 @@ def show_login_page():
     if st.button("Login"):
         user = get_user_by_email(email)  # ✅ This line should be inside the button click block
 
-        if user and verify_password(password, user["password"]):
+        if user and verify_password(password, user[3]):  # Assuming password is the 4th column
+
             st.session_state.user_id = user["id"]
             st.success("Login successful!")
             st.session_state.page = "Home"
