@@ -1,4 +1,3 @@
-import psycopg2
 from utils.db import get_connection
 
 def get_user_by_email(email):
