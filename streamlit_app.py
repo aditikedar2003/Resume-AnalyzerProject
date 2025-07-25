@@ -3,7 +3,6 @@
 import streamlit as st
 from views.auth import show_login_page, show_signup_page
 
-
 # Load custom theme
 with open("styles/theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -30,10 +29,10 @@ with col2:
 
 # Route logic
 if st.session_state.page == "Login":
-    login_ui()
+    show_login_page()   # ✅ Corrected
 
 elif st.session_state.page == "Signup":
-    signup_ui()
+    show_signup_page()  # ✅ Corrected
 
 elif st.session_state.page == "Home" and st.session_state.user_id:
     st.success("You are logged in! 🎉")
