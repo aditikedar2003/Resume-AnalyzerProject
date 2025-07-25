@@ -1,42 +1,42 @@
+# streamlit_app.py
+
 import streamlit as st
-from views.auth import show_login_page, show_signup_page
-from views.dashboard import show_dashboard
-from views.resume_scanner import show_resume_scanner
-from views.cover_letter import show_cover_letter_scanner
-from views.linkedin import show_linkedin_optimizer
-from views.job_tracker import show_job_tracker
-from utils.session import get_user_id, logout_user
+from auth import login_ui, signup_ui
 
-st.set_page_config(page_title="Resume Analyzer", layout="centered")
+# Load custom theme
+with open("styles/theme.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-def main():
-    st.markdown("<h1 style='text-align:center;'>Resume Analyzer</h1>", unsafe_allow_html=True)
-    user_id = get_user_id()
+# Initialize session state
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
 
-    if user_id:
-        menu = ["Resume Scanner", "Cover Letter Scanner", "LinkedIn Optimizer", "Job Tracker", "Dashboard", "Logout"]
-        choice = st.selectbox("Navigation", menu)
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
 
-        if choice == "Resume Scanner":
-            show_resume_scanner()
-        elif choice == "Cover Letter Scanner":
-            show_cover_letter_scanner()
-        elif choice == "LinkedIn Optimizer":
-            show_linkedin_optimizer()
-        elif choice == "Job Tracker":
-            show_job_tracker()
-        elif choice == "Dashboard":
-            show_dashboard()
-        elif choice == "Logout":
-            logout_user()
-            st.success("Logged out successfully.")
-            st.experimental_rerun()
-    else:
-        auth_mode = st.radio("Choose Option", ["Login", "Sign Up"])
-        if auth_mode == "Login":
-            show_login_page()
-        else:
-            show_signup_page()
+# Navigation
+st.markdown("<h1 style='text-align: center;'>⭐ Resume Matcher</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Create a resume that tells your story using AI</p>", unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    main()
+# Navigation buttons
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🔑 Login"):
+        st.session_state.page = "Login"
+with col2:
+    if st.button("📝 Sign Up"):
+        st.session_state.page = "Signup"
+
+# Route logic
+if st.session_state.page == "Login":
+    login_ui()
+
+elif st.session_state.page == "Signup":
+    signup_ui()
+
+elif st.session_state.page == "Home" and st.session_state.user_id:
+    st.success("You are logged in! 🎉")
+    st.markdown("👉 Now go to Resume Scanner or Dashboard (coming next)")
+
+elif st.session_state.page == "Home":
+    st.markdown("Welcome! Please login or sign up to get started.")
