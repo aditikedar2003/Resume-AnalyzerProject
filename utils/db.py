@@ -1,8 +1,5 @@
 import psycopg2
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 def get_db_connection():
     return psycopg2.connect(
@@ -13,25 +10,28 @@ def get_db_connection():
         password=os.getenv("DB_PASS")
     )
 
+def insert_user(name, email, hashed_password):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)", (name, email, hashed_password))
+    conn.commit()
+    cur.close()
+    conn.close()
+
 def get_user_by_email(email):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, full_name, email, password FROM users WHERE email=%s", (email,))
+    cur.execute("SELECT * FROM users WHERE email = %s", (email,))
     user = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return user
 
-def insert_user(full_name, email, password_hash):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO users (full_name, email, password) VALUES (%s, %s, %s) RETURNING id",
-            (full_name, email, password_hash)
-        )
-        user_id = cur.fetchone()[0]
-        conn.commit()
-        cur.close(); conn.close()
-        return user_id
-    except psycopg2.errors.UniqueViolation:
-        return None
+def insert_resume(file_name, file_data, jd_text, user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO resumes (file_name, file_data, job_description, user_id) VALUES (%s, %s, %s, %s)",
+                (file_name, file_data, jd_text, user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
