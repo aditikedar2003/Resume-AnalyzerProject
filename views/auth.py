@@ -1,7 +1,8 @@
 import streamlit as st
 import bcrypt
 from utils.db import get_user_by_email, insert_user
-from utils.session import set_user_id
+from utils.session import set_current_user
+
 
 def show_signup_page():
     st.subheader("Sign Up")
