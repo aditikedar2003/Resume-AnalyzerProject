@@ -1,19 +1,13 @@
-from .base import Base
-from sqlalchemy import Column, String, Integer
-# from sqlalchemy.orm import relationship
+# database/users.py
 
+from database.connection import get_db_connection
 
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    email = Column(String, unique=True, index=True, nullable=False)
-    name = Column(String, nullable=False)
-
-    # processed_resumes = relationship(
-    #     "ProcessedResume", back_populates="owner", cascade="all, delete-orphan"
-    # )
-    # processed_jobs = relationship(
-    #     "ProcessedJob", back_populates="owner", cascade="all, delete-orphan"
-    # )
+def get_user_by_email(email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, password FROM users WHERE email = %s", (email,))
+    result = cursor.fetchone()
+    conn.close()
+    if result:
+        return {"id": result[0], "password": result[1]}
+    return None
